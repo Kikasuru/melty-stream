@@ -5,141 +5,214 @@ from locals.cc_mem import *
 from locals.cc_char import getCharName
 
 # Set Constants.
-SCREEN_SIZE = width, height = 270,1080
-ANIM_MAX    = 1000
-ANIM_MIN    = 0
-ANIM_SPEED  = ANIM_MAX / 20
-ANIM_SPEED2 = ANIM_MAX / 16
-ANIM_ALPHA = -5
-P1_BORDER_POSX = 0
-P2_BORDER_POSX = 1710
+SCREEN_SIZE     = width, height = 1920,1080
+ANIM_MAX        = 1000
+ANIM_MIN        = 0
+ANIM_SPEED      = ANIM_MAX / 20
+ANIM_SPEED2     = ANIM_MAX / 16
+ANIM_ALPHA      = -5
+P1_BORDER_POSX  = 0
+P2_BORDER_POSX  = 1710
 
 # Make variables for the rendering process.
-p1LastChar = None
-p1LastMoon = None
-p1LastClor = None
-p1LastMode = 0
-p1Surface = pygame.Surface((270,1080))
-p1NameSurface = None
-p1CharSurface = None
-p1Cha2Surface = None
-p1MoonSurface = None
-p1ClorSurface = None
-p1SelectAnim = ANIM_MIN
-p1SelectAni2 = ANIM_MIN
-p1SelectAnimStart = False
-p1SelectAnimType = ANIM_MAX
+Surface       = pygame.Surface((1920,1080))
 
-def colorBorder(color):
+LastChar      = [None,None]
+LastMode      = [0,0]
+NameSurface   = [None,None]
+CharSurface   = [None,None]
+Cha2Surface   = [None,None]
+MoonSurface   = [None,None]
+MoGlSurface   = [None,None]
+ClorSurface   = [None,None]
+
+SelectAnim        = [ANIM_MIN,ANIM_MIN]
+SelectAni2        = [ANIM_MIN,ANIM_MIN]
+SelectAnimStart   = [False,False]
+SelectAnimType    = [ANIM_MAX,ANIM_MAX]
+
+MoonAnim          = [ANIM_MIN,ANIM_MIN]
+MoonAnimStart     = [False,False]
+
+
+def colorRender(color):
     # Make a surface for this border.
-    borderSurface = pygame.Surface((270,1080), pygame.SRCALPHA)
+    colorSurface = pygame.Surface((270,1080), pygame.SRCALPHA)
 
     # Draw a bacground for a circle.
-    pygame.draw.circle(borderSurface, [0,1,8], (211,1021), 64)
+    pygame.draw.circle(colorSurface, [0,1,8], (215,1025), 56)
     # Draw a circle in the corner.
-    pygame.draw.circle(borderSurface, color, (211,1021), 64, 5)
+    pygame.draw.circle(colorSurface, color, (215,1025), 56, 5)
     # Mask out it's bottom left corner.
-    pygame.draw.rect(borderSurface, [0,1,8], pygame.Rect(211,1021,64,64))
+    pygame.draw.rect(colorSurface, [0,1,8], pygame.Rect(215,1025,56,56))
 
     # Make a line going up.
-    pygame.draw.line(borderSurface, color, (267,993), (267,0), 5)
+    pygame.draw.line(colorSurface, color, (267,1017), (267,0), 5)
     # Make a line going to the left.
-    pygame.draw.line(borderSurface, color, (182,1077), (0,1077), 5)
+    pygame.draw.line(colorSurface, color, (206,1077), (0,1077), 5)
 
     # Return the surface.
-    return borderSurface
+    return colorSurface
+
+def borderRender(i):
+    global LastChar,LastMoon,LastClor,LastMode
+    global Surface,NameSurface,CharSurface,Cha2Surface,MoonSurface,MoGlSurface,ClorSurface
+    global SelectAnim,SelectAni2,SelectAnimStart,SelectAnimType
+    global MoonAnim,MoonAnimStart
+
+    # Create a surface.
+    BorderSurface = pygame.Surface((270,1080))
+
+    # Fill the background for this player's border.
+    BorderSurface.fill([0,1,8])
+
+    # Set some bytes for the player this border belongs to.
+    if i == 0:
+        CC_SELECTOR_MODE = read(CC_P1_SELECTOR_MODE_ADDR)[0]
+        CC_CHARACTER = read(CC_P1_CHARACTER_ADDR)[0]
+        CC_MOON_SELECTOR = read(CC_P1_MOON_SELECTOR_ADDR)[0]
+        CC_COLOR_SELECTOR = read(CC_P1_COLOR_SELECTOR_ADDR)[0]
+    if i == 1:
+        CC_SELECTOR_MODE = read(CC_P2_SELECTOR_MODE_ADDR)[0]
+        CC_CHARACTER = read(CC_P2_CHARACTER_ADDR)[0]
+        CC_MOON_SELECTOR = read(CC_P2_MOON_SELECTOR_ADDR)[0]
+        CC_COLOR_SELECTOR = read(CC_P2_COLOR_SELECTOR_ADDR)[0]
+
+    # Check if Player 1 has changed their character.
+    if CC_CHARACTER != LastChar[i]:
+        # Load the name of the character and rotate it.
+        oldNameSurf = pygame.image.load("themes/kika/assets/name/vs_name00_"+str(CC_CHARACTER).zfill(2)+".png")
+        NameSurface[i] = pygame.transform.rotate(oldNameSurf, 90)
+        # If this is the 2nd player's border, flip the name.
+        if i == 1: NameSurface[i] = pygame.transform.flip(NameSurface[i], True, False)
+
+        # If the character is not a random character.
+        if CC_CHARACTER != 0x63:
+            # Load the character image.
+            CharSurface[i] = pygame.image.load("themes/kika/assets/mug0/cut_"+str(CC_CHARACTER).zfill(2)+"00.png")
+
+            # If the character is a duo, load the second character.
+            if CC_CHARACTER in (0x04, 0x22, 0x23):
+                Cha2Surface[i] = pygame.image.load("themes/kika/assets/mug0/cut_"+str(CC_CHARACTER).zfill(2)+"01.png")
+
+        # Load the character's color palettes.
+        ClorSurface[i] = pygame.image.load("themes/kika/assets/color/color_c"+str(CC_CHARACTER).zfill(2)+".png")
+
+        # Set the last character.
+        LastChar[i] = CC_CHARACTER
+
+        # Turn the animation off immediately.
+        SelectAnim[i] = ANIM_MIN
+        SelectAni2[i] = ANIM_MIN
+        SelectAnimStart[i] = False
+        SelectAnimType[i] = ANIM_MAX
+
+    # Check if a character has been selected.
+    if CC_SELECTOR_MODE == 1 and LastMode[i] != 1:
+        # Start the Animation.
+        SelectAnim[i] = ANIM_MIN
+        SelectAni2[i] = ANIM_MIN
+        SelectAnimStart[i] = True
+        SelectAnimType[i] = ANIM_MAX
+
+    # Check if a character has been deselected.
+    if CC_SELECTOR_MODE == 0 and LastMode[i] != 0:
+        # Start the Animation.
+        SelectAnim[i] = ANIM_MAX
+        SelectAni2[i] = ANIM_MAX
+        SelectAnimStart[i] = True
+        SelectAnimType[i] = ANIM_MIN
+
+    # Check if the animation is still going, and increase it if so.
+    if SelectAnimStart[i]:
+        if SelectAnimType[i] == ANIM_MAX:
+            SelectAnim[i] += ANIM_SPEED
+            SelectAni2[i] += ANIM_SPEED2
+        else:
+            SelectAnim[i] -= ANIM_SPEED
+            SelectAni2[i] -= ANIM_SPEED2
+        # Check if the animation is finished.
+        if SelectAnim[i] == SelectAnimType[i]:
+            # If so, end the animation.
+            SelectAnim[i] = SelectAnimType[i]
+            SelectAni2[i] = SelectAnimType[i]
+            SelectAnimStart[i] = False
+
+    # Render the character.
+    yanim = (CharSurface[i].get_width() * -1) + CharSurface[i].get_width() * (1 - math.exp((SelectAnim[i] / ANIM_MAX) * ANIM_ALPHA))
+    BorderSurface.blit(CharSurface[i], (yanim,56))
+
+    # If the character is a duo, render their partner.
+    if CC_CHARACTER in (0x04, 0x22, 0x23):
+        yanim = (Cha2Surface[i].get_width() * -1) + Cha2Surface[i].get_width() * (1 - math.exp((SelectAni2[i] / ANIM_MAX) * ANIM_ALPHA))
+        BorderSurface.blit(Cha2Surface[i], (yanim,56))
+
+    # Draw the name of the character.
+    BorderSurface.blit(NameSurface[i], (222,0))
+
+    # Grab the currently selected color.
+    colorx = 1 + ((CC_COLOR_SELECTOR % 8) * 32)
+    colory = 3 + (math.floor(CC_COLOR_SELECTOR / 8) * 16)
+    color  = ClorSurface[i].get_at((colorx,colory))
+    # Draw the color border.
+    BorderSurface.blit(colorRender(color),(0,0))
+
+    # Check if a moon has been selected.
+    if CC_SELECTOR_MODE == 2 and LastMode != 2:
+        # Load the moon's graphics.
+        MoonSurface[i] = pygame.image.load("themes/kika/assets/moon/moon_"+str(CC_MOON_SELECTOR)+".png")
+        MoGlSurface[i] = pygame.image.load("themes/kika/assets/moon/moon_"+str(CC_MOON_SELECTOR)+"g.png")
+        MoGlSurface[i].set_alpha(None)
+
+        # Start the Animation.
+        MoonAnim[i] = ANIM_MAX
+        MoonAnimStart[i] = True
+
+    # Check if a moon has been deselected.
+    print(LastMode[i])
+    if CC_SELECTOR_MODE < 2 and LastMode[i] >= 2:
+        # Turn the animation off immediately.
+        MoonAnim[i] = ANIM_MIN
+        MoonAnimStart[i] = False
+
+    # Check if the animation is still going, and decrease it if so.
+    #if MoonAnimStart[i]:
+    #    MoonAnim[i] -= ANIM_SPEED
+    #    # Check if the animation is finished.
+    #    if MoonAnim[i] == ANIM_MIN:
+    #        # If so, end the animation.
+    #        MoonAnim[i] = ANIM_MIN
+    #        MoonAnimStart[i] = False
+
+    # Check if a moon should be displayed
+    if CC_SELECTOR_MODE >= 2:
+        # Display the moon.
+        BorderSurface.blit(MoonSurface[i], (167,977))
+
+        # Set the transparency of the moon's glow.
+        #MoGlSurface[i].set_alpha(int(round(MoonAnim[i] / ANIM_MAX)*255))
+        # Display the moon's glow.
+        #Surface.blit(MoGlSurface, (159,969))
+
+    # If the last mode is different from the one ingame, change it.
+    if CC_SELECTOR_MODE != LastMode[i]:
+        LastMode[i] = CC_SELECTOR_MODE
+
+    # Return the border surface.
+    return BorderSurface
 
 def render(game):
-    global p1LastChar,p1LastMoon,p1LastClor,p1LastMode
-    global p1Surface,p1NameSurface,p1CharSurface,p1Cha2Surface,p1MoonSurface,p1ClorSurface
-    global p1SelectAnim,p1SelectAni2,p1SelectAnimStart,p1SelectAnimType
-
-    # Fill the background for Player 1's border.
-    p1Surface.fill([0,1,8])
+    # Fill the background for the surface.
+    Surface.fill([0,255,0])
 
     if game:
-        # Check if Player 1 has changed their character.
-        if read(CC_P1_CHARACTER_ADDR)[0] != p1LastChar:
-            # Load the name of the character and rotate it.
-            oldNameSurf = pygame.image.load("themes/kika/assets/name/vs_name00_"+str(read(CC_P1_CHARACTER_ADDR)[0]).zfill(2)+".png")
-            p1NameSurface = pygame.transform.rotate(oldNameSurf, 90)
+        # Render both player's borders, flipping player 2's.
+        p1Border = borderRender(0)
+        p2Border = pygame.transform.flip(borderRender(1), True, False)
 
-            # If the character is not a random character.
-            if read(CC_P1_CHARACTER_ADDR)[0] != 0x63:
-                # Load the character image.
-                p1CharSurface = pygame.image.load("themes/kika/assets/mug0/cut_"+str(read(CC_P1_CHARACTER_ADDR)[0]).zfill(2)+"00.png")
+        # Blit them onto the surface.
+        Surface.blit(p1Border, (P1_BORDER_POSX, 0))
+        Surface.blit(p2Border, (P2_BORDER_POSX, 0))
 
-                # If the character is a duo, load the second character.
-                if read(CC_P1_CHARACTER_ADDR)[0] in (0x04, 0x22, 0x23):
-                    p1Cha2Surface = pygame.image.load("themes/kika/assets/mug0/cut_"+str(read(CC_P1_CHARACTER_ADDR)[0]).zfill(2)+"01.png")
-
-            # Load the character's color palettes.
-            p1ClorSurface = pygame.image.load("themes/kika/assets/color/color_c"+str(read(CC_P1_CHARACTER_ADDR)[0]).zfill(2)+".png")
-
-            # Set the last character.
-            p1LastChar = read(CC_P1_CHARACTER_ADDR)[0]
-
-            # Turn the animation off immediately.
-            p1SelectAnim = ANIM_MIN
-            p1SelectAni2 = ANIM_MIN
-            p1SelectAnimStart = False
-            p1SelectAnimType = ANIM_MAX
-
-        # Check if a character has been selected.
-        if read(CC_P1_SELECTOR_MODE_ADDR)[0] == 1 and p1LastMode != 1:
-            # Start the Animation.
-            p1SelectAnim = ANIM_MIN
-            p1SelectAni2 = ANIM_MIN
-            p1SelectAnimStart = True
-            p1SelectAnimType = ANIM_MAX
-
-            # Set the last mode.
-            p1LastMode = read(CC_P1_SELECTOR_MODE_ADDR)[0]
-
-        # Check if a character has been deselected.
-        if read(CC_P1_SELECTOR_MODE_ADDR)[0] == 0 and p1LastMode != 0:
-            # Start the Animation.
-            p1SelectAnim = ANIM_MAX
-            p1SelectAni2 = ANIM_MAX
-            p1SelectAnimStart = True
-            p1SelectAnimType = ANIM_MIN
-
-            # Set the last mode.
-            p1LastMode = read(CC_P1_SELECTOR_MODE_ADDR)[0]
-
-        # Check if the animation is still going, and increase it if so.
-        if p1SelectAnimStart:
-            if p1SelectAnimType == ANIM_MAX:
-                p1SelectAnim += ANIM_SPEED
-                p1SelectAni2 += ANIM_SPEED2
-            else:
-                p1SelectAnim -= ANIM_SPEED
-                p1SelectAni2 -= ANIM_SPEED2
-            # Check if the animation is finished.
-            if p1SelectAnim == p1SelectAnimType:
-                # If so, end the animation.
-                p1SelectAnim = p1SelectAnimType
-                p1SelectAni2 = p1SelectAnimType
-                p1SelectAnimStart = False
-
-        # Render the character.
-        yanim = (p1CharSurface.get_width() * -1) + p1CharSurface.get_width() * (1 - math.exp((p1SelectAnim / ANIM_MAX) * ANIM_ALPHA))
-        p1Surface.blit(p1CharSurface, (yanim,56))
-
-        # If the character is a duo, render their partner.
-        if read(CC_P1_CHARACTER_ADDR)[0] in (0x04, 0x22, 0x23):
-            yanim = (p1Cha2Surface.get_width() * -1) + p1Cha2Surface.get_width() * (1 - math.exp((p1SelectAni2 / ANIM_MAX) * ANIM_ALPHA))
-            p1Surface.blit(p1Cha2Surface, (yanim,56))
-
-        # Draw the name of the character.
-        p1Surface.blit(p1NameSurface, (222,0))
-
-        # Grab the currently selected color.
-        colorx = 1 + ((read(CC_P1_COLOR_SELECTOR_ADDR)[0] % 8) * 32)
-        colory = 3 + (math.floor(read(CC_P1_COLOR_SELECTOR_ADDR)[0] / 8) * 16)
-        color  = p1ClorSurface.get_at((colorx,colory))
-        # Draw the color border.
-        p1Surface.blit(colorBorder(color),(0,0))
-
-    # Return P1 Surface.
-    return p1Surface
+    # Return the surface.
+    return Surface

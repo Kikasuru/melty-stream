@@ -40,6 +40,7 @@ def colorRender(color):
     colorSurface = pygame.Surface((270,1080), pygame.SRCALPHA)
 
     # Draw a bacground for a circle.
+<<<<<<< HEAD
     pygame.draw.circle(colorSurface, [0,1,8], (215,1025), 56)
     # Draw a circle in the corner.
     pygame.draw.circle(colorSurface, color, (215,1025), 56, 5)
@@ -50,6 +51,18 @@ def colorRender(color):
     pygame.draw.line(colorSurface, color, (267,1017), (267,0), 5)
     # Make a line going to the left.
     pygame.draw.line(colorSurface, color, (206,1077), (0,1077), 5)
+=======
+    pygame.draw.circle(borderSurface, [0,1,8], (227,1037), 48)
+    # Draw a circle in the corner.
+    pygame.draw.circle(borderSurface, color, (227,1037), 48, 5)
+    # Mask out it's bottom left corner.
+    pygame.draw.rect(borderSurface, [0,1,8], pygame.Rect(227,1037,48,48))
+
+    # Make a line going up.
+    pygame.draw.line(borderSurface, color, (267,1017), (267,0), 5)
+    # Make a line going to the left.
+    pygame.draw.line(borderSurface, color, (206,1077), (0,1077), 5)
+>>>>>>> 1faf8b299a8a9dd4cf170ca6d1852434dcdc8314
 
     # Return the surface.
     return colorSurface

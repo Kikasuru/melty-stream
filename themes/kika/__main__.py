@@ -15,7 +15,7 @@ P1_BORDER_POSX  = 0
 P2_BORDER_POSX  = 1710
 
 # Make variables for the rendering process.
-Surface       = pygame.Surface((1920,1080))
+Surface       = pygame.Surface(SCREEN_SIZE)
 
 LastChar      = [None,None]
 LastMode      = [0,0]

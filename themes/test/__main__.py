@@ -10,7 +10,7 @@ SCREEN_SIZE = width, height = 160, 240
 surface = pygame.Surface(SCREEN_SIZE)
 
 # Create a debug font.
-sm_font = pygame.font.Font("04B_11__.TTF", 8)
+sm_font = pygame.font.Font("./themes/test/assets/04B_11__.TTF", 8)
 
 def render(game):
     global surface
